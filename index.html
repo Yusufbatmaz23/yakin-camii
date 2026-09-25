@@ -6,45 +6,21 @@
   <title>En Yakın Camiler</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body {
-      background: #0f172a;
-      color: #f8fafc;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
-    }
-    .card {
-      background: #1e293b;
-      padding: 32px 24px;
-      border-radius: 20px;
-      max-width: 400px;
-      width: 100%;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      border: 1px solid #334155;
-    }
-    .icon { font-size: 54px; margin-bottom: 16px; }
-    h1 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
-    p { color: #94a3b8; font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
-    .btn {
-      display: block;
-      width: 100%;
-      background: #10b981;
-      color: #ffffff;
-      padding: 16px;
-      border: none;
-      border-radius: 14px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background 0.2s, transform 0.1s;
-    }
-    .btn:active { transform: scale(0.98); background: #059669; }
-    .status { margin-top: 16px; font-size: 13px; color: #cbd5e1; }
+    body { background: #0f172a; color: #f8fafc; min-height: 100vh; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    .card { background: #1e293b; padding: 24px; border-radius: 20px; max-width: 450px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 1px solid #334155; text-align: center; }
+    .icon { font-size: 40px; margin-bottom: 10px; }
+    h1 { font-size: 20px; margin-bottom: 20px; }
+    .btn { width: 100%; background: #10b981; color: white; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { background: #475569; cursor: not-allowed; }
+    .status { margin-top: 12px; font-size: 13px; color: #cbd5e1; }
+    
+    .list-container { margin-top: 20px; text-align: left; max-height: 60vh; overflow-y: auto; padding-right: 5px; }
+    .list-item { background: #334155; padding: 14px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .info { flex-grow: 1; padding-right: 10px; }
+    .name { font-weight: bold; font-size: 15px; color: #f8fafc; margin-bottom: 4px; }
+    .dist { font-size: 13px; color: #94a3b8; }
+    .go-btn { background: #3b82f6; color: white; padding: 10px 14px; border-radius: 10px; text-decoration: none; font-size: 13px; font-weight: bold; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -52,45 +28,95 @@
   <div class="card">
     <div class="icon">🕌</div>
     <h1>En Yakın Camiler</h1>
-    <p>Konumunuza göre şu anda açık ve size en yakın camileri Google Haritalar'da listeleyin.</p>
-    <button class="btn" id="findBtn" onclick="findNearbyMosques()">Camileri Bul</button>
+    <button class="btn" id="findBtn" onclick="findMosques()">Camileri Listele</button>
     <div id="status" class="status"></div>
+    <div id="mosque-list" class="list-container"></div>
   </div>
 
   <script>
-    function findNearbyMosques() {
+    // İki koordinat arası kuş uçuşu mesafeyi hesaplar (KM)
+    function getDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; 
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function findMosques() {
       const status = document.getElementById('status');
       const btn = document.getElementById('findBtn');
+      const list = document.getElementById('mosque-list');
 
       if (!navigator.geolocation) {
-        status.textContent = "Tarayıcınız konum servisini desteklemiyor.";
-        fallback();
-        return;
+        status.textContent = "Tarayıcı konum desteklemiyor."; return;
       }
 
-      status.textContent = "Konum alınıyor...";
+      status.textContent = "Konumunuz alınıyor...";
       btn.disabled = true;
+      list.innerHTML = "";
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          status.textContent = "Harita açılıyor...";
-          // Google Haritalar'da en yakın camileri filtreli arar
-          window.location.href = `https://www.google.com/maps/search/cami/@${lat},${lng},15z`;
-        },
-        (error) => {
-          status.textContent = "Konum izni alınamadı, genel arama açılıyor...";
-          setTimeout(fallback, 1200);
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    }
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        status.textContent = "Çevredeki camiler aranıyor (5km)...";
 
-    function fallback() {
-      window.location.href = "https://www.google.com/maps/search/?api=1&query=cami";
+        // OpenStreetMap Overpass API ile camileri bul
+        const query = `[out:json];(node["amenity"="place_of_worship"]["religion"="muslim"](around:5000,${lat},${lon});way["amenity"="place_of_worship"]["religion"="muslim"](around:5000,${lat},${lon}););out center;`;
+        const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          let mosques = data.elements.map(el => {
+            const mLat = el.lat || el.center.lat;
+            const mLon = el.lon || el.center.lon;
+            return {
+              name: el.tags.name || "Bilinmeyen Cami",
+              lat: mLat,
+              lon: mLon,
+              dist: getDistance(lat, lon, mLat, mLon)
+            };
+          });
+
+          // Mesafeye göre yakından uzağa sırala
+          mosques.sort((a, b) => a.dist - b.dist);
+          mosques = mosques.slice(0, 100); // En yakın 100 tanesini al
+
+          if(mosques.length === 0) {
+            status.textContent = "Yakında cami bulunamadı.";
+            btn.disabled = false;
+            return;
+          }
+
+          status.textContent = `${mosques.length} cami listelendi.`;
+          
+          // Listeyi ekrana bas
+          mosques.forEach(m => {
+            const distText = m.dist < 1 ? (m.dist * 1000).toFixed(0) + ' m' : m.dist.toFixed(2) + ' km';
+            list.innerHTML += `
+              <div class="list-item">
+                <div class="info">
+                  <div class="name">${m.name}</div>
+                  <div class="dist">📏 ${distText} uzaklıkta</div>
+                </div>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${m.lat},${m.lon}" class="go-btn" target="_blank">Yol Tarifi</a>
+              </div>
+            `;
+          });
+          btn.disabled = false;
+          btn.textContent = "Listeyi Yenile";
+        } catch (err) {
+          status.textContent = "Veri çekilirken hata oluştu. Lütfen tekrar deneyin.";
+          btn.disabled = false;
+        }
+      }, () => {
+         status.textContent = "Konum izni alınamadı. Lütfen izin verin.";
+         btn.disabled = false;
+      }, { enableHighAccuracy: true });
     }
   </script>
-
 </body>
 </html>
