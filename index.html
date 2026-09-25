@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>En Yakın Camiler</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      background: #1e293b;
+      padding: 32px 24px;
+      border-radius: 20px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      border: 1px solid #334155;
+    }
+    .icon { font-size: 54px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+    p { color: #94a3b8; font-size: 14px; margin-bottom: 28px; line-height: 1.5; }
+    .btn {
+      display: block;
+      width: 100%;
+      background: #10b981;
+      color: #ffffff;
+      padding: 16px;
+      border: none;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); background: #059669; }
+    .status { margin-top: 16px; font-size: 13px; color: #cbd5e1; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="icon">🕌</div>
+    <h1>En Yakın Camiler</h1>
+    <p>Konumunuza göre şu anda açık ve size en yakın camileri Google Haritalar'da listeleyin.</p>
+    <button class="btn" id="findBtn" onclick="findNearbyMosques()">Camileri Bul</button>
+    <div id="status" class="status"></div>
+  </div>
+
+  <script>
+    function findNearbyMosques() {
+      const status = document.getElementById('status');
+      const btn = document.getElementById('findBtn');
+
+      if (!navigator.geolocation) {
+        status.textContent = "Tarayıcınız konum servisini desteklemiyor.";
+        fallback();
+        return;
+      }
+
+      status.textContent = "Konum alınıyor...";
+      btn.disabled = true;
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          status.textContent = "Harita açılıyor...";
+          // Google Haritalar'da en yakın camileri filtreli arar
+          window.location.href = `https://www.google.com/maps/search/cami/@${lat},${lng},15z`;
+        },
+        (error) => {
+          status.textContent = "Konum izni alınamadı, genel arama açılıyor...";
+          setTimeout(fallback, 1200);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    function fallback() {
+      window.location.href = "https://www.google.com/maps/search/?api=1&query=cami";
+    }
+  </script>
+
+</body>
+</html>
